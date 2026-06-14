@@ -22,7 +22,7 @@ FEATURES = [
 PAD_TOKEN = 0
 
 # ==========================================
-# 1. 預處理 (Preprocessing) 
+# 1. 預處理 
 # ==========================================
 class RallyDataset(Dataset):
     def __init__(self, X, yA, yP, yR, L):
@@ -35,7 +35,7 @@ class RallyDataset(Dataset):
     def __getitem__(self, i): return self.X[i], self.yA[i], self.yP[i], self.yR[i], self.L[i]
 
 # ==========================================
-# 注意力機制模組 (Attention)
+# 注意力機制模組
 # ==========================================
 class Attention(nn.Module):
     def __init__(self, hidden_dim):
@@ -54,7 +54,7 @@ class Attention(nn.Module):
         return context
 
 # ==========================================
-# 2. 架構 (Architecture) - Attention-LSTM 模型
+# 2. 架構 - Attention-LSTM 模型
 # ==========================================
 class MultiTaskLSTM(nn.Module):
     def __init__(self, num_tokens_per_feature, n_act, n_pt, emb_dim=32, hidden=256, num_layers=2, dropout=0.3):
@@ -90,7 +90,7 @@ def pad1d(a, m, ignore_index=-1):
 
 def main(args):
     # ==========================================
-    # 1. 預處理
+    
     # ==========================================
     train = pd.read_csv(args.train).sort_values(["rally_uid","strikeNumber"])
     test  = pd.read_csv(args.test).sort_values(["rally_uid","strikeNumber"])
@@ -182,7 +182,7 @@ def main(args):
     patience_counter = 0 
     best_model_path = 'best_model.pth'
 
-    # [新增] 用於儲存畫圖數據的字典
+    # 用於儲存畫圖的字典
     history = {'train_loss':[], 'val_loss':[], 'act_f1':[], 'pt_f1':[], 'auc':[], 'final':[]}
 
     for ep in range(1, args.epochs+1):
@@ -221,7 +221,7 @@ def main(args):
         auc=roc_auc_score(allR,allRp) if len(set(allR))>1 else 0.5
         final=0.4*f1A+0.4*f1P+0.2*auc
         
-        # 紀錄 History 以便畫圖
+        # 紀錄 History
         history['train_loss'].append(run_loss/len(train_loader.dataset))
         history['val_loss'].append(val_loss/len(val_loader.dataset))
         history['act_f1'].append(f1A)
@@ -241,13 +241,13 @@ def main(args):
             patience_counter += 1
             
         if patience_counter >= args.patience:
-            print(f"\n連續 {args.patience} 個 Epoch 分數沒有進步，觸發 Early Stopping 提早停止訓練！")
+            print(f"\n連續 {args.patience} 個 Epoch 分數沒有進步，觸發 Early Stopping 提早停止訓練")
             break 
 
     # ==========================================
-    # [新增] 繪製分析圖表並存檔
+    # 繪製分析圖表並存檔
     # ==========================================
-    print("\n>>> 正在繪製並儲存訓練分析圖表...")
+    print("\n 正在繪製圖表...")
     epochs_range = range(1, len(history['train_loss']) + 1)
     
     # 1. Loss 趨勢圖
@@ -277,15 +277,15 @@ def main(args):
     plt.close()
 
     # ==========================================
-    # 5. 推論與混淆矩陣 (Inference & Confusion Matrix)
+    # 5. 推論與混淆矩陣
     # ==========================================
-    print(f"\n>>> 載入最佳模型 (最高分: {best_score:.4f}) 進行預測與案例分析...")
+    print(f"\n 載入最佳模型 (最高分: {best_score:.4f}) 進行預測與案例分析...")
     if os.path.exists(best_model_path):
         model.load_state_dict(torch.load(best_model_path))
 
     model.eval()
     
-    # --- 驗證集表現以畫出混淆矩陣 (助於失敗案例分析) ---
+    # 畫出混淆矩陣
     allA_best, allAp_best, allP_best, allPp_best = [], [], [], []
     with torch.no_grad():
         for Xb,yAb,yPb,yRb,Lb in val_loader:
@@ -316,7 +316,7 @@ def main(args):
     plt.close()
     print("圖表已儲存至目錄：loss_trend.png, metrics_trend.png, cm_action.png, cm_point.png")
 
-    # --- 對 Test Data 推論產生提交檔 ---
+    # --- 產生提交檔案 ---
     def pad2d_cap(a, m, pad_val=PAD_TOKEN):
         out = np.full((m, a.shape[1]), pad_val, dtype=np.int64)
         T = min(len(a), m); out[:T]=a[:T]; return out, T
@@ -349,7 +349,7 @@ def main(args):
     out_df = out_df[final_columns]
     
     out_df.to_csv(args.out, index=False)
-    print(f"\n🎉 成功！預測檔案已儲存至: {args.out} (產出筆數: {len(out_df)})")
+    print(f"\n預測檔案已儲存至: {args.out} (產出筆數: {len(out_df)})")
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
@@ -357,7 +357,7 @@ if __name__ == "__main__":
     ap.add_argument("--test", default="test.csv")
     ap.add_argument("--out", default="submission.csv") 
     
-    # --- 你可以在這裡手動改參數 ---
+    # --- 參數 ---
     ap.add_argument("--epochs", type=int, default=50)    
     ap.add_argument("--patience", type=int, default=5)   
     ap.add_argument("--batch", type=int, default=64)

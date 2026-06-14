@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score, roc_auc_score
 import os
 
-# 固定隨機種子
+# 隨機種子
 SEED = 42
 random.seed(SEED); np.random.seed(SEED)
 torch.manual_seed(SEED); torch.cuda.manual_seed_all(SEED)
@@ -174,10 +174,10 @@ def main(args):
     opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-5)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='max', factor=0.5, patience=2)
 
-    print(f"\n🚀 模型已升級 (Attention + 提早停止) | 訓練參數: Epochs={args.epochs}, Emb={args.emb}, Hidden={args.hidden}")
+    print(f"\n 訓練參數: Epochs={args.epochs}, Emb={args.emb}, Hidden={args.hidden}")
     
     best_score = 0
-    patience_counter = 0 # 用來計算連續幾個 Epoch 沒有進步
+    patience_counter = 0 # 計算連續幾個 Epoch 沒有進步
     best_model_path = 'best_model.pth'
 
     for ep in range(1, args.epochs+1):
@@ -209,22 +209,22 @@ def main(args):
         f1A=f1_score(allA,allAp,average="macro"); f1P=f1_score(allP,allPp,average="macro")
         auc=roc_auc_score(allR,allRp); final=0.4*f1A+0.4*f1P+0.2*auc
         
-        # 根據 Final Score 調整學習率
+        # 調整學習率
         scheduler.step(final) 
 
         print(f"[Epoch {ep}/{args.epochs}] Final Score: {final:.4f} (Act F1: {f1A:.4f}, Pt F1: {f1P:.4f}, AUC: {auc:.4f})")
         
-        # [新增] Early Stopping 與儲存最佳權重
+        #  Early Stopping 
         if final > best_score:
             best_score = final
             torch.save(model.state_dict(), best_model_path)
-            patience_counter = 0 # 分數創新高，歸零計數器
+            patience_counter = 0 # 歸零計數器
         else:
             patience_counter += 1
             
         if patience_counter >= args.patience:
-            print(f"\n⚠️ 連續 {args.patience} 個 Epoch 分數沒有進步，觸發 Early Stopping 提早停止訓練！")
-            break # 跳出訓練迴圈
+            print(f"\n 連續 {args.patience} 個 Epoch 分數沒有進步，觸發 Early Stopping ")
+            break 
 
     # ==========================================
     # 5. 推論 (Inference)
@@ -267,7 +267,7 @@ def main(args):
     out_df = out_df[final_columns]
     
     out_df.to_csv(args.out, index=False)
-    print(f"\n🎉 成功！預測檔案已儲存至: {args.out} (產出筆數: {len(out_df)})")
+    print(f"\n預測檔案已儲存至: {args.out} (產出筆數: {len(out_df)})")
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
@@ -275,9 +275,8 @@ if __name__ == "__main__":
     ap.add_argument("--test", default="test.csv")
     ap.add_argument("--out", default="submission.csv") 
     
-    # --- 你可以在這裡手動改參數 ---
-    ap.add_argument("--epochs", type=int, default=50)    # 改成了 50 次
-    ap.add_argument("--patience", type=int, default=5)   # 容忍連續 5 次沒進步
+    ap.add_argument("--epochs", type=int, default=50)    
+    ap.add_argument("--patience", type=int, default=5)   
     ap.add_argument("--batch", type=int, default=64)
     ap.add_argument("--emb", type=int, default=32)       
     ap.add_argument("--hidden", type=int, default=256)   
